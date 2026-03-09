@@ -1,0 +1,112 @@
+import asyncio
+import logging
+
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import MemoryStorage
+
+from tg_core import (
+    AntiSpamMiddleware,
+    UserMiddleware,
+    create_admin_router,
+    init_db,
+    get_session_factory,
+    ensure_admins,
+)
+
+from admin import router as vpn_admin_router
+from admin import get_vpn_stats
+from config import settings
+from db.models import User
+from handlers.instructions import router as instructions_router
+from handlers.profile import router as profile_router
+from handlers.start import router as start_router
+from handlers.subscription import router as subscription_router
+from services.scheduler import create_scheduler
+
+
+logging.basicConfig(
+    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+async def main() -> None:
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    dp = Dispatcher(storage=MemoryStorage())
+
+    # ------------------------------------------------------------------
+    # Middleware
+    # ------------------------------------------------------------------
+    dp.update.middleware(AntiSpamMiddleware(
+        limit=settings.RATE_LIMIT,
+        window=settings.RATE_LIMIT_WINDOW,
+    ))
+    dp.update.middleware(UserMiddleware(user_model=User))
+
+    # ------------------------------------------------------------------
+    # Роутеры
+    # ------------------------------------------------------------------
+    dp.include_router(
+        create_admin_router(
+            user_model=User,
+            extra_routers=[vpn_admin_router],
+            stats_callback=get_vpn_stats,
+        )
+    )
+    dp.include_router(start_router)
+    dp.include_router(subscription_router)
+    dp.include_router(profile_router)
+    dp.include_router(instructions_router)
+
+    # ------------------------------------------------------------------
+    # База данных
+    # ------------------------------------------------------------------
+    await init_db(
+        database_url=settings.DATABASE_URL,
+        create_tables=True,
+    )
+
+    assigned = await ensure_admins(
+        get_session_factory(),
+        User,
+        settings.ADMIN_IDS
+    )
+
+    if assigned:
+        logger.info(f"Admins assigned: {assigned}")
+    else:
+        logger.info("No new admins assigned")
+
+    # ------------------------------------------------------------------
+    # Планировщик
+    # ------------------------------------------------------------------
+    scheduler = create_scheduler(
+        bot=bot,
+        notify_days=settings.NOTIFY_DAYS_BEFORE,
+    )
+    scheduler.start()
+    logger.info("Scheduler started.")
+
+    # ------------------------------------------------------------------
+    # Запуск
+    # ------------------------------------------------------------------
+    logger.info("Bot started.")
+
+    try:
+        await dp.start_polling(
+            bot,
+            allowed_updates=dp.resolve_used_update_types(),
+        )
+    finally:
+        scheduler.shutdown()
+        await bot.session.close()
+        logger.info("Bot stopped.")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
