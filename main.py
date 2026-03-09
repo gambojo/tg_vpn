@@ -11,7 +11,6 @@ from tg_core import (
     UserMiddleware,
     create_admin_router,
     init_db,
-    get_session_factory,
     ensure_admins,
 )
 
@@ -69,18 +68,9 @@ async def main() -> None:
     await init_db(
         database_url=settings.DATABASE_URL,
         create_tables=True,
+        user_model=User,
+        admin_ids=settings.ADMIN_IDS,
     )
-
-    assigned = await ensure_admins(
-        get_session_factory(),
-        User,
-        settings.ADMIN_IDS
-    )
-
-    if assigned:
-        logger.info(f"Admins assigned: {assigned}")
-    else:
-        logger.info("No new admins assigned")
 
     # ------------------------------------------------------------------
     # Планировщик
