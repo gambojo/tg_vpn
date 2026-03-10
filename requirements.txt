@@ -1,5 +1,5 @@
-git+https://${GITHUB_TOKEN}@github.com/gambojo/tg_core.git@v0.2.1
-py3xui>=0.3.0
+git+https://${GITHUB_TOKEN}@github.com/gambojo/tg_core.git@v0.2.2
+py3xui>=0.5.5
 qrcode[pil]>=7.4.0
 pillow>=10.0.0
 apscheduler>=3.10.0

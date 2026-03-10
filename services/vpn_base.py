@@ -10,6 +10,13 @@ from io import BytesIO
 # ------------------------------------------------------------------
 
 @dataclass
+class VpnInbound:
+    """Результат создания inbound"""
+    success: bool
+    inbound_id: int = 0
+    error: str | None = None
+
+@dataclass
 class VpnAccount:
     """Результат создания или продления аккаунта"""
     success: bool
@@ -51,6 +58,28 @@ class VpnDeleteResult:
 #   — data_limit_gb=0 означает безлимитный трафик
 # ------------------------------------------------------------------
 class BaseVpnProvider(ABC):
+
+    @abstractmethod
+    async def create_inbound(
+            self,
+            port: int,
+            remark: str,
+            server_name: str = "yandex.ru",
+    ) -> VpnInbound:
+        """
+        Создать новый inbound на VPN сервере.
+        Если inbound с таким remark уже существует — вернуть его id.
+        """
+
+    @abstractmethod
+    async def delete_inbound(
+            self,
+            inbound_id: int,
+    ) -> VpnDeleteResult:
+        """
+        Удалить inbound с VPN сервера.
+        Если inbound не существует — вернуть success=True (идемпотентно).
+        """
 
     @abstractmethod
     async def create_account(

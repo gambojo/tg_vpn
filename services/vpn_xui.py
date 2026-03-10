@@ -4,7 +4,7 @@ import uuid
 
 from py3xui import AsyncApi, Client
 
-from services.vpn_base import BaseVpnProvider, VpnAccount, VpnDeleteResult, VpnStatus
+from services.vpn_base import BaseVpnProvider, VpnAccount, VpnDeleteResult, VpnStatus, VpnInbound
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class XuiVpnProvider(BaseVpnProvider):
         external_ip: str,
         server_port: str,
         inbound_id: int,
+        server_name: str,
     ) -> None:
         self.panel_url = panel_url
         self.username = username
@@ -26,10 +27,95 @@ class XuiVpnProvider(BaseVpnProvider):
         self.external_ip = external_ip
         self.server_port = server_port
         self.inbound_id = inbound_id
+        self.server_name = server_name
 
     # ------------------------------------------------------------------
     # Публичный API — реализация контракта
     # ------------------------------------------------------------------
+
+    async def create_inbound(
+            self,
+            port: int,
+            remark: str,
+            server_name: str = "yandex.ru",
+    ) -> VpnInbound:
+        try:
+            from py3xui.inbound import Inbound, Settings, Sniffing, StreamSettings
+
+            api = await self._connect()
+            if not api:
+                return VpnInbound(success=False, error="Не удалось подключиться к панели")
+
+            # проверяем — вдруг inbound с таким remark уже существует
+            inbounds = await api.inbound.get_list()
+            existing = next((i for i in inbounds if i.remark == remark), None)
+            if existing:
+                logger.info(f"Inbound {remark} already exists with id={existing.id}")
+                return VpnInbound(success=True, inbound_id=existing.id)
+
+            # генерируем Reality ключи
+            keys = await api.server.generate_reality_keys()
+
+            stream_settings = StreamSettings(
+                security="reality",
+                network="tcp",
+                tcp_settings={
+                    "acceptProxyProtocol": False,
+                    "header": {"type": "none"},
+                },
+                reality_settings={
+                    "show": False,
+                    "dest": f"{self.server_name}:443",
+                    "serverNames": [self.server_name],
+                    "privateKey": keys.private_key,
+                    "shortIds": [""],
+                    "settings": {"publicKey": keys.public_key},
+                },
+            )
+            inbound = Inbound(
+                enable=True,
+                port=port,
+                protocol="vless",
+                settings=Settings(),
+                stream_settings=stream_settings,
+                sniffing=Sniffing(enabled=True),
+                remark=remark,
+            )
+            await api.inbound.add(inbound)
+
+            # получаем созданный inbound чтобы узнать его id
+            inbounds = await api.inbound.get_list()
+            created = next((i for i in inbounds if i.remark == remark), None)
+            if not created:
+                return VpnInbound(success=False, error="Inbound создан но не найден в списке")
+
+            logger.info(f"Inbound {remark} created with id={created.id}")
+            return VpnInbound(success=True, inbound_id=created.id)
+
+        except Exception as e:
+            logger.error(f"create_inbound failed: {e}")
+            return VpnInbound(success=False, error=str(e))
+
+    async def delete_inbound(self, inbound_id: int) -> VpnDeleteResult:
+        try:
+            api = await self._connect()
+            if not api:
+                return VpnDeleteResult(success=False, error="Не удалось подключиться к панели")
+
+            # идемпотентность — проверяем существует ли inbound
+            inbounds = await api.inbound.get_list()
+            existing = next((i for i in inbounds if i.id == inbound_id), None)
+            if not existing:
+                logger.info(f"Inbound {inbound_id} not found — считаем удалённым")
+                return VpnDeleteResult(success=True)
+
+            await api.inbound.delete(inbound_id)
+            logger.info(f"Inbound {inbound_id} deleted")
+            return VpnDeleteResult(success=True)
+
+        except Exception as e:
+            logger.error(f"delete_inbound failed: {e}")
+            return VpnDeleteResult(success=False, error=str(e))
 
     async def create_account(
         self,

@@ -14,6 +14,7 @@ def get_vpn_provider() -> BaseVpnProvider:
             external_ip=settings.XUI_EXTERNAL_IP,
             server_port=settings.XUI_SERVER_PORT,
             inbound_id=settings.XUI_INBOUND_ID,
+            server_name=settings.XUI_SERVER_NAME,
         )
     elif settings.VPN_PROVIDER == "outline":
         from services.vpn_outline import OutlineVpnProvider

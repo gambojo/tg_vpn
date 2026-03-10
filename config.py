@@ -18,6 +18,7 @@ class VpnSettings(Settings):
     XUI_EXTERNAL_IP: str = ""
     XUI_SERVER_PORT: str = "443"
     XUI_INBOUND_ID: int = 1
+    XUI_SERVER_NAME: str = "yandex.ru"
 
     # ------------------------------------------------------------------
     # Параметры подписки

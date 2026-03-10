@@ -11,7 +11,7 @@ from tg_core import (
     UserMiddleware,
     create_admin_router,
     init_db,
-    ensure_admins,
+    run_migrations,
 )
 
 from admin import router as vpn_admin_router
@@ -65,9 +65,10 @@ async def main() -> None:
     # ------------------------------------------------------------------
     # База данных
     # ------------------------------------------------------------------
+
     await init_db(
         database_url=settings.DATABASE_URL,
-        create_tables=True,
+        create_tables=False,
         user_model=User,
         admin_ids=settings.ADMIN_IDS,
     )
