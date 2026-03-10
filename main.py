@@ -65,7 +65,7 @@ async def main() -> None:
     # ------------------------------------------------------------------
     # База данных
     # ------------------------------------------------------------------
-
+    run_migrations()
     await init_db(
         database_url=settings.DATABASE_URL,
         create_tables=False,
