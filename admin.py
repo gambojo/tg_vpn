@@ -98,7 +98,7 @@ async def cmd_vpn_delete(
 
     args = message.text.split()
     if len(args) < 2 or not args[1].isdigit():
-        await message.answer("Использование: /vpn_delete <telegram_id>")
+        await message.answer("Использование: /vpn_delete &lt;telegram_id&gt;")
         return
 
     telegram_id = int(args[1])
@@ -154,7 +154,7 @@ async def cmd_vpn_info(
 
     args = message.text.split()
     if len(args) < 2 or not args[1].isdigit():
-        await message.answer("Использование: /vpn_info <telegram_id>")
+        await message.answer("Использование: /vpn_info &lt;telegram_id&gt;")
         return
 
     telegram_id = int(args[1])
