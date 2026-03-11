@@ -45,7 +45,10 @@ async def main() -> None:
         limit=settings.RATE_LIMIT,
         window=settings.RATE_LIMIT_WINDOW,
     ))
-    dp.update.middleware(UserMiddleware(user_model=User))
+    dp.update.middleware(UserMiddleware(
+        user_model=User,
+        admin_ids=settings.ADMIN_IDS,
+    ))
 
     # ------------------------------------------------------------------
     # Роутеры
