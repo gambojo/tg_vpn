@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand, BotCommandScopeChat
 
 from tg_core import (
     AntiSpamMiddleware,
@@ -37,6 +38,29 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher(storage=MemoryStorage())
+
+    # ------------------------------------------------------------------
+    # Startup
+    # ------------------------------------------------------------------
+    async def on_startup(bot: Bot):
+        await bot.set_my_commands([
+            BotCommand(command="start", description="Главное меню"),
+            BotCommand(command="help", description="Помощь"),
+        ])
+        for admin_id in settings.ADMIN_IDS:
+            await bot.set_my_commands(
+                commands=[
+                    BotCommand(command="start", description="Главное меню"),
+                    BotCommand(command="help", description="Помощь"),
+                    BotCommand(command="admin", description="Панель админа"),
+                    BotCommand(command="vpn_stats", description="Статистика VPN"),
+                    BotCommand(command="vpn_info", description="Инфо о пользователе"),
+                    BotCommand(command="vpn_delete", description="Удалить VPN"),
+                ],
+                scope=BotCommandScopeChat(chat_id=admin_id),
+            )
+
+    dp.startup.register(on_startup)
 
     # ------------------------------------------------------------------
     # Middleware
