@@ -1,6 +1,6 @@
 services:
   tg_vpn:
-    build: .
+    image: ghcr.io/gambojo/tg_vpn:latest
     container_name: tg_vpn
     env_file:
       - .env
