@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.types import Message
 
 from handlers.start import MAIN_MENU_BUTTONS
-from tg_core import main_menu, url_button
+from tgbotcore import main_menu, url_button
 
 logger = logging.getLogger(__name__)
 router = Router()

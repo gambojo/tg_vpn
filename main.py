@@ -7,7 +7,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, BotCommandScopeChat
 
-from tg_core import (
+from tgbotcore import (
     AntiSpamMiddleware,
     UserMiddleware,
     create_admin_router,

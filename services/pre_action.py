@@ -180,7 +180,7 @@ class PreActionService:
         state: FSMContext,
     ) -> PreActionResult:
         """Проверяет подписку на канал"""
-        from tg_core import confirm_cancel
+        from tgbotcore import confirm_cancel
 
         channel = step.get("channel", "")
         text = step.get("message", f"Подпишитесь на канал {channel}")

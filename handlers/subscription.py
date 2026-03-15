@@ -9,10 +9,10 @@ from config import settings
 from db.models import Subscription
 from services.pre_action import PreActionService, PreActionStates
 from services.vpn_service import vpn
-from tg_core import back_button
+from tgbotcore import back_button
 
 from handlers.start import MAIN_MENU_BUTTONS
-from tg_core import main_menu
+from tgbotcore import main_menu
 
 logger = logging.getLogger(__name__)
 router = Router()

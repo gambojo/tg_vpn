@@ -1,4 +1,4 @@
-from tg_core import Settings
+from tgbotcore import Settings
 from pydantic import field_validator
 
 

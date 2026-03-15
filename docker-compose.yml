@@ -1,9 +1,6 @@
 services:
   tg_vpn:
-    build:
-      context: .
-      args:
-        GITHUB_TOKEN: ${GITHUB_TOKEN}
+    build: .
     container_name: tg_vpn
     env_file:
       - .env

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import settings
 from db.models import Subscription
 from handlers.start import MAIN_MENU_BUTTONS
-from tg_core import main_menu
+from tgbotcore import main_menu
 
 logger = logging.getLogger(__name__)
 router = Router()

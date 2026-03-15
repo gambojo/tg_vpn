@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import BigInteger, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from tg_core import Base, UserMixin, TimestampMixin
+from tgbotcore import Base, UserMixin, TimestampMixin
 
 
 # ------------------------------------------------------------------

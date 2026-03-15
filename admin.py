@@ -212,7 +212,7 @@ async def get_vpn_stats() -> str:
     Передаётся в create_admin_router как stats_callback.
     Добавляет VPN статистику к базовой статистике /stats.
     """
-    from tg_core import get_session_factory
+    from tgbotcore import get_session_factory
     factory = get_session_factory()
 
     async with factory() as session:

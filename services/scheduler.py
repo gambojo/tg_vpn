@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Subscription, User
-from tg_core import get_session_factory
+from tgbotcore import get_session_factory
 
 logger = logging.getLogger(__name__)
 
