@@ -16,14 +16,16 @@ def get_vpn_provider() -> BaseVpnProvider:
             inbound_id=settings.XUI_INBOUND_ID,
             server_name=settings.XUI_SERVER_NAME,
         )
-    elif settings.VPN_PROVIDER == "outline":
-        from services.vpn_outline import OutlineVpnProvider
-        return OutlineVpnProvider(
-            api_url=settings.OUTLINE_API_URL,
+    elif settings.VPN_PROVIDER == "amnezia":
+        from services.vpn_amnezia import AmneziaVpnProvider
+        return AmneziaVpnProvider(
+            api_url=settings.AWG_API_URL,
+            server_id=settings.AWG_SERVER_ID,
+            username=settings.AWG_USERNAME,
+            password=settings.AWG_PASSWORD,
         )
     else:
         raise ValueError(f"Unknown VPN_PROVIDER: {settings.VPN_PROVIDER}")
-
 
 # Глобальный экземпляр — handler'ы импортируют только это
 vpn: BaseVpnProvider = get_vpn_provider()
