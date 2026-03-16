@@ -12,8 +12,6 @@ class AmneziaWGAPI:
     """
     Async HTTP клиент для amneziawg-web-ui API.
     https://github.com/AlexisHW/amneziawg-web-ui
-
-    Аутентификация — HTTP Basic Auth (NGINX_USER / NGINX_PASSWORD).
     """
 
     def __init__(
@@ -30,13 +28,19 @@ class AmneziaWGAPI:
         }
 
     async def _get(self, path: str):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             r = await client.get(f"{self.base_url}{path}", headers=self._headers)
             r.raise_for_status()
             return r.json()
 
+    async def _get_text(self, path: str) -> str:
+        async with httpx.AsyncClient(verify=False) as client:
+            r = await client.get(f"{self.base_url}{path}", headers=self._headers)
+            r.raise_for_status()
+            return r.text
+
     async def _post(self, path: str, json: dict | None = None):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             r = await client.post(
                 f"{self.base_url}{path}",
                 json=json or {},
@@ -46,14 +50,10 @@ class AmneziaWGAPI:
             return r.json()
 
     async def _delete(self, path: str):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             r = await client.delete(f"{self.base_url}{path}", headers=self._headers)
             r.raise_for_status()
             return r.json()
-
-    # ------------------------------------------------------------------
-    # System
-    # ------------------------------------------------------------------
 
     async def health(self) -> bool:
         try:
@@ -62,26 +62,30 @@ class AmneziaWGAPI:
         except Exception:
             return False
 
-    # ------------------------------------------------------------------
-    # Clients
-    # ------------------------------------------------------------------
-
     async def list_clients(self, server_id: str) -> list[dict]:
+        """
+        Возвращает список клиентов.
+        [{"id": "b3e2b6", "name": "785818468", "status": "active", ...}, ...]
+        """
         return await self._get(f"/api/servers/{server_id}/clients")
 
     async def add_client(self, server_id: str, name: str) -> dict:
-        """Возвращает {"id": "...", "name": "...", ...}"""
-        return await self._post(f"/api/servers/{server_id}/clients", {"name": name})
+        """
+        Создаёт клиента.
+        API возвращает {"client": {...}, "config": "..."}
+        Разворачиваем в плоский dict: {"id": "...", "name": "...", "config": "..."}
+        """
+        result = await self._post(f"/api/servers/{server_id}/clients", {"name": name})
+        client = result["client"]
+        client["config"] = result["config"]
+        return client
 
     async def get_client_config(self, server_id: str, client_id: str) -> str:
-        """Возвращает конфиг клиента в виде текста (.conf формат)."""
-        async with httpx.AsyncClient() as client:
-            r = await client.get(
-                f"{self.base_url}/api/servers/{server_id}/clients/{client_id}/config",
-                headers=self._headers,
-            )
-            r.raise_for_status()
-            return r.text
+        """
+        Возвращает конфиг клиента в виде plain text (.conf формат).
+        GET /api/servers/{server_id}/clients/{client_id}/config → plain text
+        """
+        return await self._get_text(f"/api/servers/{server_id}/clients/{client_id}/config")
 
     async def delete_client(self, server_id: str, client_id: str) -> dict:
         return await self._delete(f"/api/servers/{server_id}/clients/{client_id}")
@@ -114,12 +118,10 @@ class AmneziaVpnProvider(BaseVpnProvider):
         self.server_id = server_id
 
     async def create_inbound(self, port: int, remark: str, server_name: str = "yandex.ru") -> VpnInbound:
-        """Серверы управляются через веб-интерфейс — no-op."""
         logger.info("AmneziaWG: create_inbound is a no-op")
         return VpnInbound(success=True, inbound_id=0)
 
     async def delete_inbound(self, inbound_id: int) -> VpnDeleteResult:
-        """no-op."""
         logger.info("AmneziaWG: delete_inbound is a no-op")
         return VpnDeleteResult(success=True)
 
@@ -133,9 +135,10 @@ class AmneziaVpnProvider(BaseVpnProvider):
         try:
             name = str(telegram_id)
 
+            # идемпотентность — если клиент уже существует возвращаем его конфиг
             existing = await self.api.find_client_by_name(self.server_id, name)
             if existing:
-                logger.info(f"AmneziaWG: client {name} already exists")
+                logger.info(f"AmneziaWG: client {name} already exists id={existing['id']}")
                 config = await self.api.get_client_config(self.server_id, existing["id"])
                 return VpnAccount(
                     success=True,
@@ -147,9 +150,11 @@ class AmneziaVpnProvider(BaseVpnProvider):
                     is_trial=is_trial,
                 )
 
+            # создаём нового клиента
+            # add_client возвращает {id, name, config, ...}
             result = await self.api.add_client(self.server_id, name)
             client_id = result["id"]
-            config = await self.api.get_client_config(self.server_id, client_id)
+            config = result["config"]
 
             logger.info(f"AmneziaWG: client {name} created id={client_id}")
             return VpnAccount(
@@ -178,6 +183,7 @@ class AmneziaVpnProvider(BaseVpnProvider):
 
             existing = await self.api.find_client_by_name(self.server_id, name)
             if not existing:
+                logger.info(f"AmneziaWG: client {name} not found for renewal — creating new")
                 return await self.create_account(telegram_id, expiry_days, data_limit_gb)
 
             config = await self.api.get_client_config(self.server_id, existing["id"])
@@ -206,7 +212,7 @@ class AmneziaVpnProvider(BaseVpnProvider):
             return VpnStatus(
                 success=True,
                 client_id=existing["id"],
-                is_active=True,
+                is_active=existing.get("status") == "active",
                 expiry_days=0,  # срок только в БД
             )
 
