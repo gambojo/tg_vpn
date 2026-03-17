@@ -1,4 +1,17 @@
 services:
+  migrate:
+    image: ghcr.io/gambojo/tg_vpn:latest
+    container_name: tg_vpn_migrate
+    command: alembic upgrade head
+    env_file:
+      - .env
+    networks:
+      - vpn_bot_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   tg_vpn:
     image: ghcr.io/gambojo/tg_vpn:latest
     container_name: tg_vpn
@@ -7,7 +20,10 @@ services:
     networks:
       - vpn_bot_network
     depends_on:
-      - postgres
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   postgres:
@@ -21,6 +37,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - vpn_bot_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

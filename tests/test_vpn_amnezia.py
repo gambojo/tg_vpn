@@ -1,11 +1,3 @@
-import os
-os.environ["BOT_TOKEN"] = "123456:test"
-os.environ["VPN_PROVIDER"] = "amnezia"
-os.environ["AWG_API_URL"] = "http://fake-server:8080"
-os.environ["AWG_SERVER_ID"] = "wg_abc123"
-os.environ["AWG_USERNAME"] = "admin"
-os.environ["AWG_PASSWORD"] = "password"
-
 import pytest
 import respx
 import httpx
