@@ -1,5 +1,6 @@
 from tgbotcore import Settings
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
+from typing import Any
 
 
 class VpnSettings(Settings):
@@ -40,42 +41,70 @@ class VpnSettings(Settings):
     TRIAL_ENABLED: bool = True
     TRIAL_DAYS: int = 3
 
-    # ------------------------------------------------------------------
-    # Telegram Stars оплата
-    # ------------------------------------------------------------------
+    # поля читаются из .env
     PAYMENT_ENABLED: bool = False
-    PAYMENT_AMOUNT: int = 50           # в Stars
+    PAYMENT_AMOUNT: int = 50
     PAYMENT_DESCRIPTION: str = "VPN подписка на 30 дней"
+
+    CHANNEL_ENABLED: bool = False
+    CHANNEL_ID: str = "@my_channel"
+    CHANNEL_MESSAGE: str = "Подпишитесь на наш канал чтобы продолжить"
+
+    AD_ENABLED: bool = False
+    AD_TEXT: str = "Наш партнёр — SuperVPN Pro 🚀"
+    AD_BUTTON_TEXT: str = "▶️ Продолжить"
+    AD_DURATION: int = 5
 
     # ------------------------------------------------------------------
     # Pre-action хук — шаги перед выдачей VPN
     # порядок в списке = порядок выполнения
     # ------------------------------------------------------------------
-    PRE_ACTION_STEPS: list[dict] = [
-        {
-            "type": "ad",
-            "enabled": False,
-            "text": "Наш партнёр — SuperVPN Pro 🚀",
-            "duration": 5,
-        },
-        {
-            "type": "channel",
-            "enabled": False,
-            "channel": "@my_channel",
-            "message": "Подпишитесь на наш канал чтобы продолжить",
-        },
-        {
-            "type": "stars_payment",
-            "enabled": False,
-            "amount": 50,
-            "description": "VPN подписка на 30 дней",
-        },
-    ]
+    PRE_ACTION_STEPS: list[dict] = []
+
+    @model_validator(mode="after")
+    def build_pre_action_steps(self) -> "VpnSettings":
+        self.PRE_ACTION_STEPS = [
+            {
+                "type": "ad",
+                "enabled": self.AD_ENABLED,
+                "text": self.AD_TEXT,
+                "button_text": self.AD_BUTTON_TEXT,
+                "duration": self.AD_DURATION,
+            },
+            {
+                "type": "channel",
+                "enabled": self.CHANNEL_ENABLED,
+                "channel": self.CHANNEL_ID,
+                "message": self.CHANNEL_MESSAGE,
+                "button_check": "✅ Проверить подписку",
+                "button_cancel": "❌ Отмена",
+            },
+            {
+                "type": "stars_payment",
+                "enabled": self.PAYMENT_ENABLED,
+                "amount": self.PAYMENT_AMOUNT,
+                "title": "VPN подписка",
+                "description": self.PAYMENT_DESCRIPTION,
+            },
+        ]
+        return self
 
     # ------------------------------------------------------------------
     # Напоминания об истечении подписки
     # ------------------------------------------------------------------
-    NOTIFY_DAYS_BEFORE: list[int] = [3, 1]  # за сколько дней напоминать
+    NOTIFY_DAYS_BEFORE: Any = [3, 1]
+
+    @field_validator("NOTIFY_DAYS_BEFORE", mode="before")
+    @classmethod
+    def parse_notify_days(cls, v) -> list[int]:
+        if isinstance(v, list):
+            return [int(i) for i in v]
+        if isinstance(v, str):
+            v = v.strip('"\'')  # убираем кавычки если есть
+            return [int(i.strip()) for i in v.split(",") if i.strip()]
+        if isinstance(v, int):
+            return [v]
+        return v
 
     # ------------------------------------------------------------------
     # Валидация
