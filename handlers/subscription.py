@@ -238,11 +238,11 @@ async def handle_ad_continue(
     user,
     session: AsyncSession,
 ) -> None:
-    await pre_action.continue_ad(user, state, session)
-    await callback.message.delete()
-
     data = await state.get_data()
     pending_action = data.get("pending_action")
+
+    await pre_action.continue_ad(user, state, session)
+    await callback.message.delete()
 
     if pending_action == "get_vpn":
         await _do_get_vpn(callback.message, user, session)
@@ -259,6 +259,9 @@ async def handle_check_channel(
     user,
     session: AsyncSession,
 ) -> None:
+    data = await state.get_data()
+    pending_action = data.get("pending_action")
+
     result = await pre_action.check_channel(user, callback.message, state, session)
 
     if not result.completed:
@@ -266,8 +269,6 @@ async def handle_check_channel(
         return
 
     await callback.message.delete()
-    data = await state.get_data()
-    pending_action = data.get("pending_action")
 
     if pending_action == "get_vpn":
         await _do_get_vpn(callback.message, user, session)
