@@ -59,7 +59,7 @@ class VpnSettings(Settings):
     # Pre-action хук — шаги перед выдачей VPN
     # порядок в списке = порядок выполнения
     # ------------------------------------------------------------------
-    PRE_ACTION_STEPS: list[dict] = []
+    PRE_ACTION_STEPS: Any = None
 
     @model_validator(mode="after")
     def build_pre_action_steps(self) -> "VpnSettings":
